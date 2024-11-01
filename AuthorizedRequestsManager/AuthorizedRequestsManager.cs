@@ -10,9 +10,9 @@ public class AuthorizedRequestsManager {
 		clientHandler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
 	}
 
-	private string UserLogin { get; set; }
+	private string? UserLogin { get; set; }
 
-	private Tokens TokensPair { get; set; }
+	private Tokens? TokensPair { get; set; }
 
 	public async Task<bool> Register(string Login, string Password, string Name) {
 		using (var client = new HttpClient(clientHandler)) {
@@ -60,6 +60,22 @@ public class AuthorizedRequestsManager {
 
 			TokensPair = null;
 			UserLogin = null;
+
+			return true;
+		}
+	}
+
+	private async Task<bool> RefreshTokens() {
+		using (var client = new HttpClient(clientHandler)) {
+			var response = await client.PostAsync
+				(
+				 "https://localhost:7155/api/auth/refresh_token/",
+				 new FormUrlEncodedContent(new Dictionary<string, string> { { "RefreshToken", TokensPair.RefreshToken } })
+				);
+
+			if (!response.IsSuccessStatusCode) return false;
+
+			TokensPair = await JsonSerializer.DeserializeAsync<Tokens>(await response.Content.ReadAsStreamAsync());
 
 			return true;
 		}
